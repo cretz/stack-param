@@ -10,7 +10,7 @@ pub mod bytecode;
 pub mod native;
 
 use jni_sys::{JavaVM, jint, jclass, jobject, JNIEnv, JNI_OK};
-use jvmti_sys::{jvmtiEnv, JVMTI_VERSION, jvmtiEventCallbacks, jvmtiCapabilities, jvmtiEventMode, jvmtiEvent, jthread};
+use jvmti_sys::{jvmtiEnv, JVMTI_VERSION, jvmtiEventCallbacks, jvmtiCapabilities, jvmtiEventMode, jvmtiEvent, jthread, jvmtiEvent_JVMTI_EVENT_VM_INIT};
 use std::os::raw::{c_char, c_void, c_uchar};
 use std::ffi::CStr;
 use std::mem::size_of;
@@ -59,7 +59,7 @@ fn init(_options: *mut c_char) {
 
 unsafe fn get_env(vm: *mut JavaVM) -> Result<*mut jvmtiEnv, String> {
     let mut ptr: *mut c_void = ptr::null_mut() as *mut c_void;
-    let env_res = (**vm).GetEnv.unwrap()(vm, &mut ptr, JVMTI_VERSION);
+    let env_res = (**vm).GetEnv.unwrap()(vm, &mut ptr, JVMTI_VERSION as i32);
     if env_res != JNI_OK {
         return Result::Err(format!("No environment, err: {}", env_res));
     }
@@ -69,7 +69,7 @@ unsafe fn get_env(vm: *mut JavaVM) -> Result<*mut jvmtiEnv, String> {
 unsafe fn add_capabilities(jvmti_env: *mut jvmtiEnv) -> Result<(), String> {
     let caps = jvmtiCapabilities {
         // can_access_local_variables | can_generate_all_class_hook_events
-        _bindgen_bitfield_1_: 0x00004000 | 0x04000000,
+        _bitfield_1: std::mem::transmute([0x00004000u64 | 0x04000000u64, 0]),
         ..Default::default()
     };
     return util::unit_or_jvmti_err((**jvmti_env).AddCapabilities.unwrap()(jvmti_env, &caps));
@@ -89,8 +89,8 @@ unsafe fn set_event_callbacks(jvmti_env: *mut jvmtiEnv) -> Result<(), String> {
 }
 
 unsafe fn enable_notifications(jvmti_env: *mut jvmtiEnv) -> Result<(), String> {
-    enable_notification(jvmti_env, jvmtiEvent::JVMTI_EVENT_VM_INIT)?;
-    return enable_notification(jvmti_env, jvmtiEvent::JVMTI_EVENT_CLASS_FILE_LOAD_HOOK);
+    enable_notification(jvmti_env, jvmtiEvent_JVMTI_EVENT_VM_INIT)?;
+    enable_notification(jvmti_env, jvmtiEvent::JVMTI_EVENT_CLASS_FILE_LOAD_HOOK)
 }
 
 unsafe fn enable_notification(jvmti_env: *mut jvmtiEnv, event: jvmtiEvent) -> Result<(), String> {

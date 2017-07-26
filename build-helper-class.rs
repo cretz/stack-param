@@ -1,4 +1,7 @@
+extern crate bindgen;
 
+use std::env;
+use std::path::PathBuf;
 use std::process::Command;
 
 fn main() {
@@ -20,4 +23,36 @@ fn main() {
     println!("Gradle stdout: {}", String::from_utf8_lossy(&output.stdout));
     println!("Gradle stderr: {}", String::from_utf8_lossy(&output.stderr));
     assert!(output.status.success());
+
+
+    let bindings = bindgen::builder()
+        .header("src/jvmti_sys/wrapper.h")
+
+        // We want jni defs from the jni-sys crate
+        .raw_line("use jni_sys::*;")
+        .whitelist_recursively(false)
+
+        .whitelisted_type(".*JVMTI.*")
+        .whitelisted_type(".*jvmti.*")
+        .whitelisted_type("^jlocation")
+        .whitelisted_type("^jthread.*")
+        .whitelisted_type("^jniNativeInterface$")
+
+        // This is not defined in jni-sys for some reason
+        .whitelisted_type("^_?jrawMonitorID")
+
+        .whitelisted_var(".*JVMTI.*")
+        .whitelisted_var(".*jvmti.*")
+
+        .derive_default(true)
+
+        .generate()
+        .expect("Unable to generate bindings");
+
+
+    // Write the bindings to the $OUT_DIR/bindings.rs file.
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    bindings
+        .write_to_file(out_path.join("bindings.rs"))
+        .expect("Couldn't write bindings!");
 }

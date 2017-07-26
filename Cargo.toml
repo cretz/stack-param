@@ -18,3 +18,5 @@ zip = { version = "0.2", default-features = false }
 [build-dependencies]
 log = "0.3"
 env_logger = "0.3"
+bindgen = "^0.28.0"
+
