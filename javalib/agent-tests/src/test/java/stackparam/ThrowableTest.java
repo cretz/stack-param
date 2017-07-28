@@ -9,10 +9,12 @@ public class ThrowableTest {
 
     @Test
     public void testStackTraceElementToString() throws Exception {
-        String expected = "[this=" + this + ", boolArg=true, byteArg=100, " +
+        String expected = "[this=" + this.toString().replace("stackparam.", "s.") +
+                ", boolArg=true, byteArg=100, " +
                 "charArg=e, shortArg=102, intArg=103, longArg=104, " +
                 "floatArg=105.6, doubleArg=106.7, nullArg=null, " +
-                "objectExactArg=" + CONST_OBJ + ", stringVarArgs=[foo, bar, baz]]";
+                "objectExactArg=" + CONST_OBJ.toString().replace("java.lang", "j.l") +
+                ", stringVarArgs=[foo, bar, baz]]";
         StackTraceElement elem = getTestElement();
         String traceStr = elem.toString();
         traceStr = traceStr.substring(traceStr.indexOf('['));

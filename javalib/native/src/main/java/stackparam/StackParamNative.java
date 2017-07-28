@@ -1,6 +1,7 @@
 package stackparam;
 
 import java.util.Arrays;
+import java.lang.reflect.Method;
 
 public class StackParamNative {
 
@@ -9,6 +10,15 @@ public class StackParamNative {
      * and has an ellipsis appended.
      */
     public static int MAX_PARAM_STR_LEN = 50;
+
+    public static Method DEFAULT_TO_STRING;
+    static {
+        try {
+            DEFAULT_TO_STRING = Object.class.getMethod("toString");
+        } catch (Exception e) {
+            //can't happen
+        }
+    }
 
     /**
      * Returns the stack params of the given thread for the given depth. It is
@@ -60,14 +70,18 @@ public class StackParamNative {
                 if (param.length() <= MAX_PARAM_STR_LEN) ret.append(param);
                 else ret.append(param, 0, MAX_PARAM_STR_LEN).append("...");
             }
-            return ret.append("]").toString();
+            return ret.append("]").toString().replace("\n", "\\n");
         } catch (Exception e) {
             return frameString + "[failed getting params: " + e + "]";
         }
     }
 
     private static String paramValToString(Object paramVal) {
-        if (paramVal != null && paramVal.getClass().isArray()) {
+        if (paramVal == null) {
+            return "null";
+        }
+
+        if (paramVal.getClass().isArray()) {
             if (paramVal instanceof boolean[]) return Arrays.toString((boolean[]) paramVal);
             else if (paramVal instanceof byte[]) return Arrays.toString((byte[]) paramVal);
             else if (paramVal instanceof char[]) return Arrays.toString((char[]) paramVal);
@@ -77,6 +91,25 @@ public class StackParamNative {
             else if (paramVal instanceof float[]) return Arrays.toString((float[]) paramVal);
             else if (paramVal instanceof double[]) return Arrays.toString((double[]) paramVal);
             else return Arrays.toString((Object[]) paramVal);
+        }
+
+        // Collapse package names to first letters when using default toString for objects
+        try {
+            Method toStringMethod = paramVal.getClass().getMethod("toString");
+            if (DEFAULT_TO_STRING.equals(toStringMethod)) {
+                String tmp = paramVal.toString();
+                String[] split = tmp.split("\\.");
+                StringBuilder out = new StringBuilder();
+                for(int i=0; i<split.length - 1; i++) {
+                    String s = split[i];
+                    out.append(s.charAt(0)).append(".");
+                }
+                out.append(split[split.length-1]);
+                return out.toString();
+            }
+        } catch(Exception e) {
+            //all objects have toString methods, so can't happen
+            throw new RuntimeException("Can't happen", e);
         }
         return String.valueOf(paramVal);
     }
